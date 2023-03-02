@@ -1,0 +1,251 @@
+---
+title: "Bellabeat - FitBit Fitness Tracker - Case Study"
+author: "Abby"
+date: "2023-02-22"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+  word_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+knitr::include_graphics("Bellabeat-logo-1024x271.jpg")
+```
+
+
+## **About Bellabeat**
+
+Urška Sršen and Sando Mur founded Bellabeat in 2013, a high-tech company that manufactures health-focused smart products. Bellabeat's has empowered women with knowledge about their own health and habits by collecting data on activity, sleep, stress, and reproductive health. 
+
+## **Mission**
+
+Bellabeat is a successful small company and has potential to become a larger player in the global smart device market. Bellabeat's marketing team has prioritized analyzing smart device usage data in order to gain insight into how people are already using their smart devices. Then, using this information, the company would like high-level recommendations for how these trends can inform Bellabeat marketing strategy.
+
+## **PHASE 1: ASK** 
+### Questions for Analysis
+
+1. What are some trends in smart device usage?
+2. How could these trends apply to Bellabeat customers?
+3. How could these trends help influence Bellabeat marketing strategy?
+
+### Business Task
+
+Identify current trends of fitness trackers and make recommendations that will influence Bellabeat marketing strategy. 
+
+### Key Stake Holders
+
+* Sando Mur: Mathematician and Bellabeat’s cofounder; key member of the Bellabeat executive team
+* Urška Sršen: Bellabeat's cofounder and Chief Creative Officer
+* Bellabeat marketing analytics team
+
+
+## **PHASE 2: PREPARE**
+### Data Used
+
+For this case study a public data set named 'FitBit Fitness Tracker Data' was sourced from Kaggle.This Kaggle data set contains personal fitness tracker from thirty-three fitbit users. Thirty-three eligible Fitbit users consented to the submission of personal tracker data, including minute-level output for physical activity, heart rate, and sleep monitoring. It includes information about daily activity, steps, and heart rate that can be used to explore users’ habits.
+
+### Data licensing, privacy, security, and accessibility
+
+The sourced data set is made available through Mobius and has effectively relinquished all copyright rights and dedicated those rights to the public domain. You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.
+
+### Data Organization and Verification 
+
+This data set has 18 available CSV documents. This data set is organized in a long format, which mean each subject or unique ID has multiple rows of data. 
+
+### Data Credibility and Integrity 
+
+I run into sampling bias using this small data set of thirty-three FitBit users, as I do not have any demographic information and unsure of the population size. If the population size was 30 the sample size would be 28, with a confidence level of 95% and a 5% margin of error. A larger sample size would be useful to echo results below.
+
+## **PHASE 3: PROCESS**
+### Data Cleansing and Manipulation
+
+I will choose R to perform my analysis for Bellabeat. I will use R to prepare, analyze, and create visualizations. 
+
+#### Installing and Loading Packages
+
+**Installed packages**
+
+* Tidyverse
+* Here
+* Skimr
+* Janitor
+
+**Library packages**
+
+* tidyverse
+* lubridate
+* ggplot2
+* dyplyr
+* tidyr
+* readr
+
+```{r}
+install.packages("tidyverse") 
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+```
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(skimr)
+library(janitor)
+```
+
+```{r message=FALSE}
+library(lubridate)
+```
+
+**Import Data Sheets**
+
+```{r message=FALSE}
+activity_df <- read_csv("dailyActivity_merged.csv")
+calories_df <- read_csv("dailyCalories_merged.csv")
+steps_df <- read_csv("dailySteps_merged.csv")
+sleep_df <- read_csv("sleepDay_merged.csv")
+weight_df <- read_csv("weightLogInfo_merged.csv")
+
+```
+
+
+Glimpse function allows me to preview our selected data frames and check the summary of each column.
+```{r}
+glimpse(activity_df)
+glimpse(calories_df)
+glimpse(steps_df)
+glimpse(sleep_df)
+glimpse(weight_df)
+```
+
+**Summarizing the data sets made available the activity_df, calories_df, and steps_df all have consistently 940 rows of observation. The sleep_df has 413 rows of observation, but it has enough data to perform analysis. The weight_df has only 67 rows of data from 8 subjects. There is no consistency with this data as few subjects took weights everyday of the study and some subjects were weighed randomly. Weights were not gathered on all participating subjects and starting and ending weights are not available. I will omit weight_df from my analysis. The activity_df has merged steps_df and calories_df. I will primarily use the activity_df and sleep_df for my analysis.**
+
+#### Data cleansing and formatting
+
+n_unique() allows me to check the number of unique subjects per data frame. 
+We have 33 unique subjects to analyze data for activity, steps, and calories. There is 24 unique data from the sleep_df, I will still use the sleep_df for my analysis. 
+
+```{r}
+n_unique(activity_df$Id)
+n_unique(sleep_df$Id)
+```
+
+I will check for any duplicate data within the data frames. sleep_df has 3 rows of data that are duplicates.
+
+```{r}
+sum(duplicated(activity_df))
+sum(duplicated(sleep_df))
+```
+
+I will remove duplicates and N/A. 
+
+```{r}
+activity_df <- activity_df %>%
+  distinct() %>%
+  drop_na()
+
+sleep_df <- sleep_df %>%
+  distinct() %>%
+  drop_na()
+```
+
+I will verify that the duplicates were removed. The activity_df maintained 940 observations, so no N/A's were removed. 
+
+```{r}
+sum(duplicated(sleep_df))
+```
+I will start to format the data frames for consistency when merging data.
+Clean_names() allows the variables of each column to have consistent formatting. 
+```{r}
+clean_names(activity_df)
+activity_df<- rename_with(activity_df, tolower)
+clean_names(sleep_df)
+sleep_df <- rename_with(sleep_df, tolower)
+```
+
+Now I will change the date-time format and the rename the columns for consistency when merging data frames. 
+```{r}
+activity_df <- activity_df %>%
+  rename(date = activitydate) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+
+sleep_df <- sleep_df %>%
+  rename(date = sleepday) %>%
+  mutate(date = as_date(date, format ="%m/%d/%Y %I:%M:%S %p"))
+```
+
+```{r}
+sleep_df <- sleep_df %>%
+  rename(time_sleep = totalminutesasleep)
+
+activity_df <- activity_df %>%
+  rename(daily_steps = totalsteps)
+
+activity_df <- activity_df %>%
+  rename(very_active = veryactiveminutes)
+
+activity_df <- activity_df %>%
+  rename(fairly_active = fairlyactiveminutes)
+
+```
+
+Merge activity_df and sleep_df datasets by their primary keys id and date. 
+```{r}
+total_activity <- merge(activity_df, sleep_df, by = c("id", "date"))
+
+glimpse(total_activity)
+```
+
+## **PHASE 3 & 4: ANALYZE & VISUALIZATIONS**
+
+I will make visualizations and compare total steps in correlation with calories burned, calories burned and time asleep, and time asleep versus time in bed.
+
+```{r}
+ggplot(data=total_activity, aes(x=daily_steps, y=calories)) + 
+  geom_point(color='coral') + geom_smooth(color='black') + labs(title="Total Daily Steps vs. Calories Burned")
+  
+```
+
+A positive correlation can be observed between total daily steps and calories burned. An increase in steps per day or an increase in activity will burn more calories. Next we will observe any correlations between calories burned and time asleep.
+
+
+```{r}
+ggplot(data=total_activity, aes(x=time_sleep, y=calories)) + 
+  geom_point(color='coral') + geom_smooth(color='black') + labs(title="Calories Burned vs. Restful Sleep")
+
+```
+
+There is not a correlation between how much calories are burned and the amount of sleep the subject received. Based on this analysis the quality of sleep does not depend on the subject's activity during the day.  Majority of the subjects would get 6-8 hours of sleep regardless of activity level. Next we will observe time asleep vs time in bed.
+
+```{r}
+ggplot(data=total_activity, aes(x=time_sleep, y=sedentaryminutes)) + 
+geom_point(color='coral') + geom_smooth(color='black') +
+  labs(title="Time Asleep vs Sedentary Minutes")
+```
+
+There is a negative correlation between time asleep and sedentary minutes.  If the subject were less sedentary, they would likely get 5-8 hours of sleep. 
+
+### **Analysis**
+
+With the three visualizations I have discovered an increase in activity will burn more calories. I surprisingly discovered there is not a correlation between how much calories are burned and the amount of sleep the subject received. A larger population and sample size would need to be analyzed to properly support this analysis.  Based on this analysis the quality of sleep does not depend on the subject's activity during the day.  Majority of the subjects would get 6-8 hours of sleep regardless of activity level.There is a negative correlation between time asleep and sedentary minutes.  If the subject were less sedentary (more active), they would likely get 5-8 hours of sleep. 
+
+
+## **PHASE 5: CONCLUSION & ACTION**
+
+Bellabeat has been on a mission to analyze usage of smart devices to market their products to continue to empower women to make executive decisions about their health. My current role is to identify current trends of fitness trackers and make recommendations that will influence Bellabeat marketing strategy. After my analysis of the FitBit Fitness Tracker Data sets I have found some insights that will help positively influence Bellabeat marketing strategy. 
+
+1. Based on the positive correlation between increased activity and calories burned I recommend Bellabeat to create a friendly workout competition through a Bellabeat community. Women can engage in small groups of 10-20 people and track their activity level through daily or weekly competitions. Women with the most logged activity during the competition will win points to purchase more Bellabeat products. This marketing strategy encourages women to be active and promotes increased sales of Bellabeat products.
+
+2. Bellabeat users would also benefit from a 'Get Moving' feature. If the user is sedentary for an hour they will receive a reminder to move around to help reach their daily step goal. 
+
+3. I finally recommend Bellabeat to create step goal challenges. The users will set a step goal of 12,000 steps or more. If the goals are met their smart device will make a cheerful celebration sound. The users will also get special reward points and special promotion opportunities. This encourages Bellabeat community of women to be more active.
+
+
+**This concludes my recommendations for Bellabeat's marketing team who are seeking new growth opportunities.**
